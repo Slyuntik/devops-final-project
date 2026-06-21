@@ -1,0 +1,10 @@
+groups:
+  - name: scibert-alerts
+    rules:
+      - alert: AppDown
+        expr: up{job="scibert-app"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "SciBERT app is down"

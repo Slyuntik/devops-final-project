@@ -1,0 +1,59 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.app
+    container_name: scibert_app
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_PATH=/app/data/scibert_quality_model
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://scibert_user:scibert_pass@db:5432/scibert_quality
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16
+    container_name: scibert_db
+    environment:
+      POSTGRES_DB: scibert_quality
+      POSTGRES_USER: scibert_user
+      POSTGRES_PASSWORD: scibert_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: scibert_prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - app
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: scibert_grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.nginx
+    container_name: scibert_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - app
+
+volumes:
+  postgres_data:
